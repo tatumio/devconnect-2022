@@ -1,0 +1,74 @@
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.26.1/axios.min.js"
+            integrity="sha512-bPh3uwgU5qEMipS/VOmRqynnMXGGSRv+72H/N260MQeXZIK4PG48401Bsby9Nq5P5fz7hy5UGNmC/W1Z51h2GQ=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+<div class="container">
+    <h2>How to Mint NFT with MetaMask and Tatum</h2>
+    <br/>
+    <form>
+        <div class="form-group">
+            <label for="tokenId">Token ID of the minted NFT</label>
+            <input class="form-control" type="number" name="tokenId" value="5" id="tokenId"/>
+        </div>
+        <button class="btn btn-info enableMetamask" type="button">Enable MetaMask</button>
+        <button class="btn btn-success mintNFT" type="button">Mint NFT</button>
+    </form>
+    <br/>
+    <pre id="account"></pre>
+    <br/>
+    <pre id="txId"></pre>
+</div>
+<script type="text/javascript">
+  let accounts = [];
+  document.querySelector('.enableMetamask')
+    .addEventListener('click', async () => {
+      accounts = await ethereum.request({
+        method: 'eth_requestAccounts'
+      });
+      document.getElementById('account').innerHTML = '<h4>Connected account:</h4>' + accounts
+      console.log(accounts);
+    });
+
+  document.querySelector('.mintNFT')
+    .addEventListener('click', async () => {
+      const response = await axios.post('https://api-eu1.tatum.io/v3/nft/mint/', {
+        "contractAddress": "0xfba943249d04b9e0213d69e4922613512e0E0750",
+        "tokenId": document.getElementById('tokenId').value,
+        "chain": "MATIC",
+        "to": "0x5d75016b048d4d632b22d3b5250029f33ee296c8",
+        "url": "ipfs://bafkreicz2uyzexbyfw2n3mvljirmexh3ukwxzncxtkwxzgtxx6duqcxhqa",
+        "signatureId": "a6826cb1-b6ca-4c88-bf31-e63223a3b464"
+      }, {
+        headers: {
+          'x-api-key': 'YOUR_API_KEY'
+        }
+      });
+      const {
+        signatureId
+      } = response.data;
+      const {
+        data
+      } = await axios.get('https://api-eu1.tatum.io/v3/kms/' + signatureId, {
+        headers: {
+          'x-api-key': 'YOUR_API_KEY'
+        }
+      });
+      const txConfig = JSON.parse(data.serializedTransaction);
+      txConfig.from = accounts[0];
+      txConfig.gasPrice = txConfig.gasPrice ? parseInt(txConfig.gasPrice).toString(16) : undefined;
+      const result = await ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [txConfig],
+      });
+
+      document.getElementById('txId').innerHTML = '<h4>Mint NFT transaction ID:</h4>' + result +'<br/>View on <a href="https://mumbai.polygonscan.com/tx/'+result+'" target="_blank">PolygonScan</a>'
+      console.log(result);
+    });
+</script>
+</body>
+</html>
